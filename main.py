@@ -19,11 +19,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. Banco de Dados Ajustado (Preço de armas em milhares, munição por unidade individual)
+# 2. Banco de Dados Ajustado (Tudo por unidade individual)
 database = {
     "Uzi": {
         "tipo": "Arma",
-        "unidade": "unidade",
+        "unidade": "unidade(s)",
         "peso": 4.25,
         "economia": 13225,
         "receita": {
@@ -38,7 +38,7 @@ database = {
     },
     "Steyr AUG": {
         "tipo": "Arma",
-        "unidade": "unidade",
+        "unidade": "unidade(s)",
         "peso": 5.75,
         "economia": 75225,
         "receita": {
@@ -53,11 +53,11 @@ database = {
     },
     "Munição de Rifle (Fuzil)": {
         "tipo": "Munição",
-        "unidade": "pack (x30)",
-        "peso": 0.025,
-        "economia": 120,
+        "unidade": "bala(s)",
+        "peso": 0.025 / 30,  # Peso por bala individual
+        "economia": 120 / 30, # Economia por bala individual
         "receita": {
-            "Peças de Metal": 20, "Peças de Cobre": 20, "Frasco de Pólvora": 5
+            "Peças de Metal": 20 / 30, "Peças de Cobre": 20 / 30, "Frasco de Pólvora": 5 / 30
         },
         "precos": {
             "Parceria": {"Limpo": 200, "Sujo": 260},
@@ -66,11 +66,11 @@ database = {
     },
     "Munição de Sub": {
         "tipo": "Munição",
-        "unidade": "pack (x30)",
-        "peso": 0.025,
-        "economia": 100,
+        "unidade": "bala(s)",
+        "peso": 0.025 / 30,
+        "economia": 100 / 30,
         "receita": {
-            "Peças de Metal": 10, "Peças de Cobre": 10, "Frasco de Pólvora": 3
+            "Peças de Metal": 10 / 30, "Peças de Cobre": 10 / 30, "Frasco de Pólvora": 3 / 30
         },
         "precos": {
             "Parceria": {"Limpo": 125, "Sujo": 162},
@@ -79,11 +79,11 @@ database = {
     },
     "Munição de PT": {
         "tipo": "Munição",
-        "unidade": "pack (x30)",
-        "peso": 0.025,
-        "economia": 60,
+        "unidade": "bala(s)",
+        "peso": 0.025 / 30,
+        "economia": 60 / 30,
         "receita": {
-            "Peças de Cobre": 10, "Frasco de Pólvora": 2
+            "Peças de Cobre": 10 / 30, "Frasco de Pólvora": 2 / 30
         },
         "precos": {
             "Parceria": {"Limpo": 95, "Sujo": 123},
@@ -92,7 +92,7 @@ database = {
     },
     "Flipper Hacker": {
         "tipo": "Utilitário",
-        "unidade": "unidade",
+        "unidade": "unidade(s)",
         "peso": 0.100,
         "economia": 500,
         "receita": {
@@ -107,32 +107,28 @@ database = {
 
 # 3. Interface do Usuário
 st.title("🩸 BLOODLINE PRODUCTION HUB")
-st.write("Módulo completo de cálculo: Armas, Munições e Dispositivos.")
+st.write("Módulo de cálculo simplificado por unidades reais.")
 
 col1, col2 = st.columns(2)
 
 with col1:
     item_selecionado = st.selectbox("O que deseja fabricar?", list(database.keys()))
     unid_medida = database[item_selecionado]["unidade"]
-    quantidade = st.number_input(f"Quantidade a Produzir (em {unid_medida})", min_value=1, value=1, step=1)
+    # Definido step=30 para munições para ajudar a preencher de 30 em 30 se quiserem, mas aceita qualquer valor
+    passo = 30 if database[item_selecionado]["tipo"] == "Munição" else 1
+    quantidade = st.number_input(f"Quantidade a Produzir (em {unid_medida})", min_value=1, value=passo, step=passo)
 
 with col2:
     tabela = st.selectbox("Tabela de Venda", ["Parceria", "Pista"])
     tipo_dinheiro = st.radio("Tipo de Pagamento", ["Limpo", "Sujo"], horizontal=True)
 
-# 4. Processamento dos Dados com a Nova Lógica de Multiplicação por 1.000 para Armas
+# 4. Processamento dos Dados
 item = database[item_selecionado]
 valor_tabela = item["precos"][tabela][tipo_dinheiro]
 
-if item["tipo"] == "Munição":
-    total_balas = quantidade * 30
-    total_venda = valor_tabela * total_balas
-elif item["tipo"] == "Arma":
-    # Multiplica o valor por 1.000 (ex: 180 vira 180.000)
-    valor_real_arma = valor_tabela * 1000
-    total_venda = valor_real_arma * quantidade
+if item["tipo"] == "Arma":
+    total_venda = valor_tabela * 1000 * quantidade
 else:
-    # Para o Flipper Hacker e outros utilitários (mantém o valor seco ou ajusta se também for em mil)
     total_venda = valor_tabela * quantidade
 
 total_peso = item["peso"] * quantidade
@@ -143,22 +139,25 @@ st.markdown("---")
 # 5. Exibição de Métricas (Cards Roxos)
 m1, m2, m3 = st.columns(3)
 with m1:
-    st.metric("Venda Total", f"${total_venda:,}")
+    st.metric("Venda Total", f"${int(total_venda):,}")
 with m2:
-    st.metric("Peso Total", f"{total_peso:.2f} kg")
+    st.metric("Peso Total", f"{total_peso:.3f} kg")
 with m3:
-    st.metric("Economia Gerada", f"${total_economia:,}")
+    st.metric("Economia Gerada", f"${int(total_economia):,}")
 
 # 6. Informações de Contexto Dinâmicas
 if item["tipo"] == "Munição":
-    st.info(f"🎯 **Produção:** {quantidade} pack(s) = **{total_balas:,} balas** individuais.\n\n💰 **Preço cobrado:** ${valor_tabela} por bala (Total por pack: ${valor_tabela * 30:,}).")
+    packs_necessarios = quantidade / 30
+    st.info(f"🎯 **No Menu de Produção:** Para obter {quantidade} balas, você precisará clicar para fabricar **{packs_necessarios:.1f} vezes** (packs).")
 elif item["tipo"] == "Arma":
     st.info(f"⚔️ **Especificação:** Valor unitário na tabela: **${valor_tabela}k** (${valor_tabela * 1000:,}).")
 
-# 7. Detalhamento de Materiais
+# 7. Detalhamento de Materiais (Arredondado para cima para garantir que não falte nada)
+import math
 st.subheader("📋 Lista Bruta de Materiais")
 with st.expander("Clique aqui para expandir a lista de materiais necessários"):
     for mat, qtd_unit in item["receita"].items():
-        st.write(f"🟣 **{mat}**: {qtd_unit * quantidade:,}")
+        qtd_total = math.ceil(qtd_unit * quantidade)
+        st.write(f"🟣 **{mat}**: {qtd_total:,}")
 
 st.caption("Desenvolvido para uso exclusivo da Bloodline RP")
