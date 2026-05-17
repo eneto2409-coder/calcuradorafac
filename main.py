@@ -19,7 +19,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. Banco de Dados Atualizado (Armas, Munições e Utilitários)
+# 2. Banco de Dados Ajustado (Preço de armas em milhares, munição por unidade individual)
 database = {
     "Uzi": {
         "tipo": "Arma",
@@ -93,14 +93,14 @@ database = {
     "Flipper Hacker": {
         "tipo": "Utilitário",
         "unidade": "unidade",
-        "peso": 0.100,  # Estimativa padrão para o dispositivo
-        "economia": 500, # Estimativa base de fabricação
+        "peso": 0.100,
+        "economia": 500,
         "receita": {
             "Peças de Metal": 15, "Peças de Cobre": 10, "Fios de Cobre": 2, "Plástico": 15
         },
         "precos": {
-            "Parceria": {"Limpo": 90, "Sujo": 90}, # Valor fixo indicado na tabela
-            "Pista": {"Limpo": 110, "Sujo": 110}     # Valor único de pista
+            "Parceria": {"Limpo": 90, "Sujo": 90}, 
+            "Pista": {"Limpo": 110, "Sujo": 110}
         }
     }
 }
@@ -120,10 +120,21 @@ with col2:
     tabela = st.selectbox("Tabela de Venda", ["Parceria", "Pista"])
     tipo_dinheiro = st.radio("Tipo de Pagamento", ["Limpo", "Sujo"], horizontal=True)
 
-# 4. Processamento dos Dados
+# 4. Processamento dos Dados com a Nova Lógica de Multiplicação por 1.000 para Armas
 item = database[item_selecionado]
-valor_unitario = item["precos"][tabela][tipo_dinheiro]
-total_venda = valor_unitario * quantidade
+valor_tabela = item["precos"][tabela][tipo_dinheiro]
+
+if item["tipo"] == "Munição":
+    total_balas = quantidade * 30
+    total_venda = valor_tabela * total_balas
+elif item["tipo"] == "Arma":
+    # Multiplica o valor por 1.000 (ex: 180 vira 180.000)
+    valor_real_arma = valor_tabela * 1000
+    total_venda = valor_real_arma * quantidade
+else:
+    # Para o Flipper Hacker e outros utilitários (mantém o valor seco ou ajusta se também for em mil)
+    total_venda = valor_tabela * quantidade
+
 total_peso = item["peso"] * quantidade
 total_economia = item["economia"] * quantidade
 
@@ -134,14 +145,15 @@ m1, m2, m3 = st.columns(3)
 with m1:
     st.metric("Venda Total", f"${total_venda:,}")
 with m2:
-    st.metric("Peso Total", f"{total_peso:.3f} kg")
+    st.metric("Peso Total", f"{total_peso:.2f} kg")
 with m3:
     st.metric("Economia Gerada", f"${total_economia:,}")
 
-# 6. Detalhe de Produção Total para Munições
+# 6. Informações de Contexto Dinâmicas
 if item["tipo"] == "Munição":
-    total_balas = quantidade * 30
-    st.info(f"🎯 **Produção Total:** Esta ordem vai gerar exatamente **{total_balas:,} balas** individuais.")
+    st.info(f"🎯 **Produção:** {quantidade} pack(s) = **{total_balas:,} balas** individuais.\n\n💰 **Preço cobrado:** ${valor_tabela} por bala (Total por pack: ${valor_tabela * 30:,}).")
+elif item["tipo"] == "Arma":
+    st.info(f"⚔️ **Especificação:** Valor unitário na tabela: **${valor_tabela}k** (${valor_tabela * 1000:,}).")
 
 # 7. Detalhamento de Materiais
 st.subheader("📋 Lista Bruta de Materiais")
